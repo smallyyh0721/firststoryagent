@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Story Agent - AI故事生成器</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <span class="logo-icon">📚</span>
+                <h1>Story Agent</h1>
+                <span class="subtitle">AI故事生成器</span>
+            </div>
+            <nav class="nav">
+                <button class="nav-btn active" data-page="generate">
+                    <span class="nav-icon">✨</span>
+                    <span class="nav-text">生成故事</span>
+                </button>
+                <button class="nav-btn" data-page="list">
+                    <span class="nav-icon">📖</span>
+                    <span class="nav-text">故事列表</span>
+                </button>
+                <button class="nav-btn" data-page="about">
+                    <span class="nav-icon">ℹ️</span>
+                    <span class="nav-text">关于</span>
+                </button>
+            </nav>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Story Generator Page -->
+            <section id="page-generate" class="page active">
+                <div class="card">
+                    <h2 class="card-title">
+                        <span class="title-icon">🎭</span>
+                        故事背景设置
+                    </h2>
+                    
+                    <!-- Story Genre Selection -->
+                    <div class="form-group">
+                        <label class="form-label">故事类型</label>
+                        <div class="genre-options" id="genreOptions">
+                            <label class="genre-option">
+                                <input type="radio" name="genre" value="Fantasy" checked>
+                                <span class="genre-icon">🧙</span>
+                                <span class="genre-name">奇幻</span>
+                            </label>
+                            <label class="genre-option">
+                                <input type="radio" name="genre" value="Sci-Fi">
+                                <span class="genre-icon">🚀</span>
+                                <span class="genre-name">科幻</span>
+                            </label>
+                            <label class="genre-option">
+                                <input type="radio" name="genre" value="Mystery">
+                                <span class="genre-icon">🔍</span>
+                                <span class="genre-name">悬疑</span>
+                            </label>
+                            <label class="genre-option">
+                                <input type="radio" name="genre" value="Romance">
+                                <span class="genre-icon">💕</span>
+                                <span class="genre-name">浪漫</span>
+                            </label>
+                            <label class="genre-option">
+                                <input type="radio" name="genre" value="Adventure">
+                                <span class="genre-icon">⚔️</span>
+                                <span class="genre-name">冒险</span>
+                            </label>
+                            <label class="genre-option">
+                                <input type="radio" name="genre" value="Horror">
+                                <span class="genre-icon">👻</span>
+                                <span class="genre-name">恐怖</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Story Length Selection -->
+                    <div class="form-group">
+                        <label class="form-label">故事长度</label>
+                        <div class="length-options">
+                            <label class="length-option">
+                                <input type="radio" name="length" value="short">
+                                <span class="length-badge">短篇</span>
+                                <span class="length-desc">~500字</span>
+                            </label>
+                            <label class="length-option">
+                                <input type="radio" name="length" value="medium" checked>
+                                <span class="length-badge">中篇</span>
+                                <span class="length-desc">~1500字</span>
+                            </label>
+                            <label class="length-option">
+                                <input type="radio" name="length" value="long">
+                                <span class="length-badge">长篇</span>
+                                <span class="length-desc">~3000字</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Creative Prompt Input -->
+                    <div class="form-group">
+                        <label class="form-label" for="promptInput">
+                            <span class="label-icon">💡</span>
+                            创意提示
+                        </label>
+                        <textarea 
+                            id="promptInput" 
+                            class="textarea" 
+                            placeholder="输入你的故事构思，例如：&#10;• 一只勇敢的小猫在森林中寻找回家的路&#10;• 未来世界中人类与机器人的友情&#10;• 一个关于时间旅行的神秘故事"
+                            rows="5"
+                        ></textarea>
+                        <div class="char-count">
+                            <span id="charCount">0</span> 字符
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="action-buttons">
+                        <button id="generateBtn" class="btn btn-primary">
+                            <span class="btn-icon">🚀</span>
+                            生成故事
+                        </button>
+                        <button id="regenerateBtn" class="btn btn-secondary" style="display: none;">
+                            <span class="btn-icon">🔄</span>
+                            重新生成
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Result Card -->
+                <div id="resultCard" class="card result-card" style="display: none;">
+                    <h2 class="card-title">
+                        <span class="title-icon">📖</span>
+                        生成结果
+                    </h2>
+                    
+                    <div class="story-result">
+                        <div class="result-header">
+                            <h3 id="storyTitle" class="story-title">故事标题</h3>
+                            <a id="notionLink" href="#" target="_blank" class="notion-link">
+                                <span class="link-icon">🔗</span>
+                                在Notion中查看
+                            </a>
+                        </div>
+                        
+                        <div class="story-meta">
+                            <span class="meta-tag" id="storyGenre">类型</span>
+                            <span class="meta-tag" id="storyWordCount">字数</span>
+                        </div>
+                        
+                        <div class="story-preview">
+                            <pre id="storyContent"></pre>
+                        </div>
+                        
+                        <div class="result-actions">
+                            <button id="copyBtn" class="btn btn-small">
+                                <span class="btn-icon">📋</span>
+                                复制内容
+                            </button>
+                            <button id="openNotionBtn" class="btn btn-small">
+                                <span class="btn-icon">🔗</span>
+                                打开Notion
+                            </button>
+                            <button id="clearBtn" class="btn btn-small btn-danger">
+                                <span class="btn-icon">❌</span>
+                                清除
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Story List Page -->
+            <section id="page-list" class="page" style="display: none;">
+                <div class="card">
+                    <h2 class="card-title">
+                        <span class="title-icon">📚</span>
+                        我的故事
+                    </h2>
+                    
+                    <!-- Filter -->
+                    <div class="filter-bar">
+                        <select id="filterGenre" class="filter-select">
+                            <option value="">所有类型</option>
+                            <option value="Fantasy">奇幻</option>
+                            <option value="Sci-Fi">科幻</option>
+                            <option value="Mystery">悬疑</option>
+                            <option value="Romance">浪漫</option>
+                            <option value="Adventure">冒险</option>
+                            <option value="Horror">恐怖</option>
+                        </select>
+                        <button id="refreshBtn" class="btn btn-small">
+                            <span class="btn-icon">🔄</span>
+                            刷新
+                        </button>
+                    </div>
+                    
+                    <!-- Story List -->
+                    <div id="storyList" class="story-list">
+                        <div class="loading">加载中...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- About Page -->
+            <section id="page-about" class="page" style="display: none;">
+                <div class="card">
+                    <h2 class="card-title">
+                        <span class="title-icon">ℹ️</span>
+                        关于Story Agent
+                    </h2>
+                    
+                    <div class="about-content">
+                        <h3>🎯 系统介绍</h3>
+                        <p>Story Agent是一个基于AI的智能故事生成器，使用OpenAI GPT模型自动创作故事，并自动保存到您的Notion数据库中。</p>
+                        
+                        <h3>✨ 主要功能</h3>
+                        <ul class="feature-list">
+                            <li>🤖 AI自动生成创意故事</li>
+                            <li>📚 多种故事类型选择</li>
+                            <li>📏 灵活的故事长度设置</li>
+                            <li>🔗 自动保存到Notion</li>
+                            <li>📖 故事列表管理</li>
+                            <li>📋 一键复制内容</li>
+                        </ul>
+                        
+                        <h3>🏗️ 技术架构</h3>
+                        <ul class="feature-list">
+                            <li><strong>后端</strong>：FastAPI + Python</li>
+                            <li><strong>AI引擎</strong>：OpenAI GPT</li>
+                            <li><strong>数据存储</strong>：Notion Database</li>
+                            <li><strong>前端</strong>：HTML + JavaScript</li>
+                        </ul>
+                        
+                        <h3>💡 使用技巧</h3>
+                        <ol class="tip-list">
+                            <li>选择您喜欢的故事类型</li>
+                            <li>设置合适的故事长度</li>
+                            <li>输入详细的创意提示（越详细越好）</li>
+                            <li>点击"生成故事"等待AI创作</li>
+                            <li>在Notion中查看完整故事</li>
+                        </ol>
+                        
+                        <div class="about-footer">
+                            <p>📧 如有问题，请联系开发者</p>
+                            <p>🌟 享受AI创作之旅！</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Toast Notification -->
+        <div id="toast" class="toast" style="display: none;"></div>
+
+        <!-- Loading Overlay -->
+        <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+            <div class="loading-content">
+                <div class="spinner"></div>
+                <p>AI正在为您创作故事...</p>
+                <p class="loading-tip">这可能需要几秒钟</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

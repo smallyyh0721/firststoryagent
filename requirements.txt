@@ -1,0 +1,21 @@
+# Story Agent Backend Dependencies
+
+# Web Framework
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+
+# Notion API
+notion-client==2.2.1
+
+# LLM Integration
+httpx>=0.25.0
+
+# Environment Management
+python-dotenv>=1.0.0
+
+# Data Validation
+pydantic>=2.0.0
+
+# Testing (optional)
+pytest>=7.4.0
+httpx>=0.25.0
