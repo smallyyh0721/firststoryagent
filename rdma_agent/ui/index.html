@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RDMA Agent Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1>RDMA Agent</h1>
+                <span class="version">v1.0.0</span>
+            </div>
+            <div class="header-right">
+                <span id="status-indicator" class="status-dot status-unknown"></span>
+                <span id="status-text">Connecting...</span>
+                <button id="btn-refresh" class="btn btn-sm" onclick="refreshAll()">Refresh</button>
+            </div>
+        </header>
+
+        <!-- Navigation Tabs -->
+        <nav class="tabs">
+            <button class="tab active" data-tab="dashboard" onclick="switchTab('dashboard')">Dashboard</button>
+            <button class="tab" data-tab="investigations" onclick="switchTab('investigations')">Investigations</button>
+            <button class="tab" data-tab="skills" onclick="switchTab('skills')">Skills</button>
+            <button class="tab" data-tab="knowledge" onclick="switchTab('knowledge')">Knowledge Base</button>
+            <button class="tab" data-tab="collect" onclick="switchTab('collect')">Collectors</button>
+            <button class="tab" data-tab="alarms" onclick="switchTab('alarms')">Alarms</button>
+        </nav>
+
+        <!-- Dashboard Tab -->
+        <div id="tab-dashboard" class="tab-content active">
+            <div class="grid grid-4">
+                <div class="card stat-card">
+                    <div class="stat-label">Monitor Status</div>
+                    <div id="stat-monitor" class="stat-value">--</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-label">Total Investigations</div>
+                    <div id="stat-investigations" class="stat-value">0</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-label">Registered Skills</div>
+                    <div id="stat-skills" class="stat-value">0</div>
+                </div>
+                <div class="card stat-card">
+                    <div class="stat-label">Alarms Sent</div>
+                    <div id="stat-alarms" class="stat-value">0</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Quick Actions</h2>
+                </div>
+                <div class="card-body actions-row">
+                    <button class="btn btn-primary" onclick="runManualCheck()">Run Manual Check</button>
+                    <button class="btn btn-secondary" onclick="switchTab('collect')">Collect Snapshots</button>
+                    <button class="btn btn-secondary" onclick="switchTab('skills')">Manage Skills</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Recent Investigations</h2>
+                </div>
+                <div class="card-body">
+                    <table id="recent-investigations" class="table">
+                        <thead>
+                            <tr>
+                                <th>Issue ID</th>
+                                <th>Summary</th>
+                                <th>Severity</th>
+                                <th>Status</th>
+                                <th>Confidence</th>
+                                <th>Started</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    <p id="no-investigations" class="text-muted">No investigations yet.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Investigations Tab -->
+        <div id="tab-investigations" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2>All Investigations</h2>
+                    <button class="btn btn-sm" onclick="loadInvestigations()">Refresh</button>
+                </div>
+                <div class="card-body">
+                    <table id="all-investigations" class="table">
+                        <thead>
+                            <tr>
+                                <th>Issue ID</th>
+                                <th>Summary</th>
+                                <th>Severity</th>
+                                <th>Status</th>
+                                <th>Hypothesis</th>
+                                <th>Confidence</th>
+                                <th>Steps</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Investigation Detail Modal -->
+            <div id="investigation-detail" class="card" style="display:none;">
+                <div class="card-header">
+                    <h2>Investigation Detail</h2>
+                    <button class="btn btn-sm" onclick="closeDetail()">Close</button>
+                </div>
+                <div class="card-body">
+                    <div id="detail-content"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Skills Tab -->
+        <div id="tab-skills" class="tab-content">
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Registered Skills</h2>
+                        <select id="skill-filter" onchange="loadSkills()">
+                            <option value="">All Categories</option>
+                            <option value="diagnostics">Diagnostics</option>
+                            <option value="remediation">Remediation</option>
+                            <option value="utility">Utility</option>
+                        </select>
+                    </div>
+                    <div class="card-body">
+                        <div id="skills-list"></div>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Execute Skill</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>Skill Name</label>
+                                <input type="text" id="exec-skill-name" class="input" placeholder="e.g., check_port_state">
+                            </div>
+                            <div class="form-group">
+                                <label>Parameters (JSON)</label>
+                                <textarea id="exec-skill-params" class="input textarea" placeholder='{"device": "mlx5_0"}'></textarea>
+                            </div>
+                            <button class="btn btn-primary" onclick="executeSkill()">Execute</button>
+                            <pre id="exec-result" class="code-block" style="display:none;"></pre>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Register New Skill</h2>
+                        </div>
+                        <div class="card-body">
+                            <div class="form-group">
+                                <label>Name</label>
+                                <input type="text" id="new-skill-name" class="input" placeholder="my_custom_check">
+                            </div>
+                            <div class="form-group">
+                                <label>Description</label>
+                                <textarea id="new-skill-desc" class="input textarea" placeholder="What this skill does..."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Category</label>
+                                <select id="new-skill-category" class="input">
+                                    <option value="diagnostics">Diagnostics</option>
+                                    <option value="remediation">Remediation</option>
+                                    <option value="utility">Utility</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Command Template</label>
+                                <input type="text" id="new-skill-cmd" class="input" placeholder="my_tool --flag {param1}">
+                            </div>
+                            <div class="form-group">
+                                <label>Parameters (comma-separated)</label>
+                                <input type="text" id="new-skill-params" class="input" placeholder="param1,param2">
+                            </div>
+                            <div class="form-group">
+                                <label>Risk Level</label>
+                                <select id="new-skill-risk" class="input">
+                                    <option value="safe">Safe</option>
+                                    <option value="moderate">Moderate</option>
+                                    <option value="dangerous">Dangerous</option>
+                                </select>
+                            </div>
+                            <button class="btn btn-primary" onclick="registerSkill()">Register Skill</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Knowledge Base Tab -->
+        <div id="tab-knowledge" class="tab-content">
+            <div class="grid grid-2">
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Query Knowledge Base</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label>Query</label>
+                            <textarea id="kb-query" class="input textarea" placeholder="e.g., How to troubleshoot RDMA link flapping..."></textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="queryKnowledge()">Search</button>
+                        <div id="kb-results" style="margin-top:16px;"></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2>Add Knowledge</h2>
+                    </div>
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label>Document ID</label>
+                            <input type="text" id="kb-doc-id" class="input" placeholder="e.g., rdma-link-debug-001">
+                        </div>
+                        <div class="form-group">
+                            <label>Content</label>
+                            <textarea id="kb-doc-text" class="input textarea" rows="10" placeholder="Paste troubleshooting knowledge here..."></textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="addKnowledge()">Add Document</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Collectors Tab -->
+        <div id="tab-collect" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Collect Snapshots</h2>
+                </div>
+                <div class="card-body actions-row">
+                    <button class="btn btn-primary" onclick="collectSnapshot('rdma')">Collect RDMA</button>
+                    <button class="btn btn-primary" onclick="collectSnapshot('system')">Collect System</button>
+                    <button class="btn btn-primary" onclick="collectSnapshot('switch')">Collect Switch/Fabric</button>
+                </div>
+            </div>
+            <div class="card" id="collect-result-card" style="display:none;">
+                <div class="card-header">
+                    <h2 id="collect-result-title">Snapshot Result</h2>
+                </div>
+                <div class="card-body">
+                    <pre id="collect-result" class="code-block"></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alarms Tab -->
+        <div id="tab-alarms" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Alarm History</h2>
+                    <button class="btn btn-sm" onclick="loadAlarms()">Refresh</button>
+                </div>
+                <div class="card-body">
+                    <table id="alarms-table" class="table">
+                        <thead>
+                            <tr>
+                                <th>Issue ID</th>
+                                <th>Severity</th>
+                                <th>Summary</th>
+                                <th>Hypothesis</th>
+                                <th>Confidence</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                    <p id="no-alarms" class="text-muted">No alarms sent.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notifications -->
+        <div id="toast-container"></div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
