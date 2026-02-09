@@ -1,0 +1,155 @@
+# ============================================================
+# RDMA Issue Analysis Workflow - Dify.ai DSL
+# Import this into Dify.ai to create the analysis workflow
+# ============================================================
+#
+# How to use:
+# 1. In Dify.ai, go to Studio > Create App > Workflow
+# 2. Use "Import DSL" and upload this file
+# 3. Configure the model providers (OpenAI-compatible) pointing
+#    to your local LLM, Embedding, and Rerank servers
+# 4. Create a Knowledge dataset and upload the knowledge_base/*.md files
+# 5. Update the knowledge-retrieval node with your dataset ID
+# 6. Publish the workflow
+#
+# The RDMA Agent backend calls this workflow via Dify API
+# when analyzing detected issues.
+# ============================================================
+
+app:
+  name: "RDMA Issue Analysis Agent"
+  description: "Analyzes RDMA network issues using RAG + LLM"
+  mode: "workflow"
+
+workflow:
+  nodes:
+    # ── Start Node ──────────────────────────────────────────
+    - id: start
+      type: start
+      title: "Issue Input"
+      variables:
+        - name: issue_summary
+          type: string
+          required: true
+          label: "Issue Summary"
+        - name: severity
+          type: string
+          required: true
+          label: "Severity"
+        - name: category
+          type: string
+          required: true
+          label: "Category"
+        - name: diagnostic_data
+          type: string
+          required: true
+          label: "Collected Diagnostic Data"
+
+    # ── Knowledge Retrieval ─────────────────────────────────
+    - id: knowledge_retrieval
+      type: knowledge-retrieval
+      title: "Query RDMA Knowledge Base"
+      config:
+        dataset_ids:
+          - "<YOUR_DATASET_ID>"  # Replace with actual dataset ID
+        query: "{{#start.issue_summary#}} {{#start.category#}}"
+        retrieval_mode: "semantic_search"
+        top_k: 5
+        score_threshold: 0.5
+        reranking_model:
+          provider: "openai_api_compatible"
+          model: "<YOUR_RERANK_MODEL>"  # Replace with your rerank model name
+
+    # ── LLM Analysis Node ──────────────────────────────────
+    - id: llm_analysis
+      type: llm
+      title: "Root Cause Analysis"
+      config:
+        model:
+          provider: "openai_api_compatible"
+          name: "<YOUR_LLM_MODEL>"  # Replace with your LLM model name
+          mode: "chat"
+          completion_params:
+            temperature: 0.1
+            max_tokens: 4096
+        prompts:
+          - role: system
+            text: |
+              You are an expert RDMA network engineer and troubleshooting agent.
+              You analyze RDMA infrastructure issues including InfiniBand, RoCE,
+              Mellanox/NVIDIA NICs, switches, and the Linux OFED stack.
+
+              Analyze the detected issue and output a JSON action plan:
+              {
+                "root_cause_hypothesis": "description",
+                "confidence": 0.0-1.0,
+                "action_plan": [
+                  {
+                    "step": 1,
+                    "description": "what this step does",
+                    "skill": "skill_name",
+                    "params": {"key": "value"},
+                    "expected_outcome": "what we expect"
+                  }
+                ],
+                "immediate_actions": ["action1"],
+                "escalation_needed": false
+              }
+          - role: user
+            text: |
+              ## Detected Issue
+              {{#start.issue_summary#}}
+
+              ## Severity: {{#start.severity#}}
+              ## Category: {{#start.category#}}
+
+              ## Diagnostic Data
+              {{#start.diagnostic_data#}}
+
+              ## Relevant Knowledge
+              {{#knowledge_retrieval.result#}}
+
+              Analyze this issue and create an action plan.
+
+    # ── Condition: Check if Escalation Needed ───────────────
+    - id: check_escalation
+      type: if-else
+      title: "Escalation Check"
+      conditions:
+        - variable: "{{#llm_analysis.text#}}"
+          operator: "contains"
+          value: '"escalation_needed": true'
+
+    # ── Output: Analysis Result ─────────────────────────────
+    - id: output_analysis
+      type: end
+      title: "Analysis Output"
+      outputs:
+        - name: analysis_result
+          value: "{{#llm_analysis.text#}}"
+        - name: needs_escalation
+          value: "false"
+
+    # ── Output: Escalation ──────────────────────────────────
+    - id: output_escalation
+      type: end
+      title: "Escalation Output"
+      outputs:
+        - name: analysis_result
+          value: "{{#llm_analysis.text#}}"
+        - name: needs_escalation
+          value: "true"
+
+  edges:
+    - source: start
+      target: knowledge_retrieval
+    - source: knowledge_retrieval
+      target: llm_analysis
+    - source: llm_analysis
+      target: check_escalation
+    - source: check_escalation
+      target: output_analysis
+      condition: "false"
+    - source: check_escalation
+      target: output_escalation
+      condition: "true"
